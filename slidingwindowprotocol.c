@@ -1,121 +1,81 @@
+
+/* Simulation of Sliding Window Protocol */ // SlideServer.c : A Simple Slide Server Program Using Sliding Window Protocol
 #include<stdio.h> 
-#include<conio.h> 
-void main()
-{
-char sender[50],receiver[50]; int i,winsize;
-clrscr();
-printf("\n ENTER THE WINDOWS SIZE : "); scanf("%d",&winsize);
-printf("\n SENDER WINDOW IS EXPANDED TO STORE MESSAGE OR WINDOW \n");
-printf("\n ENTER THE DATA TO BE SENT: "); fflush(stdin);
-gets(sender);
-for(i=0;i<winsize;i++)
-receiver[i]=sender[i]; receiver[i]=NULL;
-printf("\n MESSAGE SEND BY THE SENDER:\n"); puts(sender);
-printf("\n WINDOW SIZE OF RECEIVER IS EXPANDED\n"); printf("\n ACKNOWLEDGEMENT FROM RECEIVER \n");
-for(i=0;i<winsize;i++); printf("\n ACK:%d",i);
-printf("\n MESSAGE RECEIVED BY RECEIVER IS : "); puts(receiver);
-printf("\n WINDOW SIZE OF RECEIVER IS SHRINKED \n");
-getch(); }
-
-
-
-//Client server based Sliding window protocol
-SENDER
-#include<sys/socket.h>
-#include<sys/types.h>
-#include<netinet/in.h>
-#include<netdb.h>
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<unistd.h>
-#include<errno.h>
-int main()
-{
-int sock,bytes_received,connected,true=1,i=1,s,f=0,sin_size; char send_data[1024],data[1024],c,fr[30]=" ";
-struct sockaddr_in server_addr,client_addr; if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
-{
-perror("Socket not created");
-exit(1);
-}
-if(setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,&true,sizeof(int))==-1) {
-perror("Setsockopt");
-exit(1);
-}
-server_addr.sin_family=AF_INET;
-server_addr.sin_port=htons(17000); server_addr.sin_addr.s_addr=INADDR_ANY;
-if(bind(sock,(struct sockaddr *)&server_addr,sizeof(struct sockaddr))==-1) {
-perror("Unable to bind");
-exit(1);
-}
-if(listen(sock,5)==-1)
-{
-perror("Listen");
-exit(1);
-}
-fflush(stdout);
-sin_size=sizeof(struct sockaddr_in);
-connected=accept(sock,(struct sockaddr *)&client_addr,&sin_size); while(strcmp(fr,"exit")!=0)
-{
-printf("Enter Data Frame %d:(Enter exit for End): ",i);
-scanf("%s",fr);
-send(connected,fr,strlen(fr),0); recv(sock,data,1024,0);
-if(strlen(data)!=0)
-printf("I got an acknowledgement : %s\n",data); fflush(stdout);
-i++;
-} close(sock); return (0);
-}
-
-
-
-
-RECEIVER 
 #include<sys/socket.h> 
-#include<sys/types.h>
+#include<sys/types.h> 
 #include<netinet/in.h> 
-#include<netdb.h> 
+#include<string.h> 
+#include<stdlib.h> 
+#include<arpa/inet.h> 
+#define SIZE 4
+
+int main() {
+int sfd,lfd,len,i,j,status;
+char str[20],frame[20],temp[20],ack[20]; struct sockaddr_in saddr,caddr; sfd=socket(AF_INET,SOCK_STREAM,0); if(sfd<0)
+perror("Error");
+bzero(&saddr,sizeof(saddr)); saddr.sin_family=AF_INET; saddr.sin_addr.s_addr=htonl(INADDR_ANY); saddr.sin_port=htons(5465);
+if(bind(sfd,(struct sockaddr*)&saddr,sizeof(saddr))<0) perror("Bind Error");
+listen(sfd,5);
+len=sizeof(&caddr);
+lfd=accept(sfd,(struct sockaddr*)&caddr,&len); printf(" Enter the text : \n");
+scanf("%s",str);
+i=0;
+while(i<strlen(str))
+{
+memset(frame,0,20); strncpy(frame,str+i,SIZE); printf(" Transmitting Frames. "); len=strlen(frame); for(j=0;j<len;j++)
+{
+printf("%d",i+j); sprintf(temp,"%d",i+j);
+}
+strcat(frame,temp); }
+printf("\n"); write(lfd,frame,sizeof(frame)); read(lfd,ack,20); sscanf(ack,"%d",&status);
+if(status==-1)
+printf(" Transmission is successful. \n");
+else {
+printf(" Received error in %d \n\n",status); printf("\n\n Retransmitting Frame. "); for(j=0;;)
+{
+frame[j]=str[j+status]; printf("%d",j+status); j++;
+if((j+status)%4==0) break;
+}
+printf("\n"); frame[j]='\0'; len=strlen(frame); for(j=0;j<len;j++) {
+sprintf(temp,"%d",j+status);
+strcat(frame,temp); }
+write(lfd,frame,sizeof(frame)); }
+i+=SIZE; }
+write(lfd,"exit",sizeof("exit")); printf("Exiting\n");
+sleep(2);
+close(lfd);
+close(sfd);
+
+
+
+// SlideClient.c : A Simple Slide Client Program Using Sliding Window Protocol
 #include<stdio.h> 
 #include<string.h> 
 #include<stdlib.h> 
-#include<unistd.h> 
-#include<errno.h>
+#include<sys/socket.h> 
+#include<sys/types.h> 
+#include<netinet/in.h> 
+
 int main()
 {
-int sock,bytes_received,i=1;
-char receive[30];
-struct hostent *host;
-struct sockaddr_in server_addr;
-host=gethostbyname("127.0.0.1"); if((sock=socket(AF_INET,SOCK_STREAM,0))==-1)
+int sfd,lfd,len,choice;
+char str[20],str1[20],err[20];
+struct sockaddr_in saddr,caddr; sfd=socket(AF_INET,SOCK_STREAM,0); if(sfd<0)
+perror("FdError");
+bzero(&saddr,sizeof(saddr)); saddr.sin_family=AF_INET; saddr.sin_addr.s_addr=INADDR_ANY; saddr.sin_port=htons(5465);
+connect(sfd,(struct sockaddr*)&saddr,sizeof(saddr)); for(;;)
 {
-perror("Socket not created");
-exit(1);
-}
-printf("Socket created");
-server_addr.sin_family=AF_INET;
-server_addr.sin_port=htons(17000);
-server_addr.sin_addr=*((struct in_addr *)host->h_addr); bzero(&(server_addr.sin_zero),8);
-if(connect(sock,(struct sockaddr *)&server_addr,sizeof(struct sockaddr))==-1)
+read(sfd,str,20);
+if(!strcmp(str,"exit")) {
+printf("Exiting\n");
+break; }
+printf("\n\nReceived%s\n\n1.Do u want to report an error(1-Yes 0-No)",str); scanf("%d",&choice);
+if(!choice)
+write(sfd,"-1",sizeof("-1")); else
 {
-perror("Connect");
-exit(1);
-}
-while(1)
-{
-bytes_received=recv(sock,receive,20,0); receive[bytes_received]='\0'; if(strcmp(receive,"exit")==0||strcmp(receive,"exit")==0) {
-close(sock);
-break;
-}
-else
-{
-if(strlen(receive)<10)
-{
-printf("\n Frame %d data %s received\n",i,receive); send(0,receive,strlen(receive),0);
-}
-else
-{
-send(0,"negative",10,0);
-}
-i++;
-}
-} close(sock); return(0);
+printf("Enter the sequence no of the frame where error has occured\n"); scanf("%s",err);
+write(sfd,err,sizeof(err));
+read(sfd,str,20);
+printf("\n\nReceived the re-transmitted frames%s\n\n",str);
+} }
 }
